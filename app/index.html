@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NestEgg · Household Budget — The Alvarez Family</title>
+<meta name="description" content="NestEgg is a household budget site for the Alvarez family: track income and spending, set category budgets, save toward goals, and see where every dollar goes. Works fully offline.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#/">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="30" height="30"><circle cx="16" cy="16" r="15" fill="#1e5c3a"/><path d="M9 19c2-6 5-9 7-9s5 3 7 9" fill="none" stroke="#f7f1e3" stroke-width="2.4" stroke-linecap="round"/><circle cx="16" cy="21" r="2.2" fill="#e8722a"/></svg>
+    </span>
+    <span class="brand-name">NestEgg</span>
+    <span class="brand-sub">Household Budget</span>
+  </a>
+  <nav class="mainnav" aria-label="Main">
+    <a href="#/" data-route="">Dashboard</a>
+    <a href="#/transactions" data-route="transactions">Transactions</a>
+    <a href="#/budget" data-route="budget">Budget</a>
+    <a href="#/goals" data-route="goals">Goals</a>
+    <a href="#/reports" data-route="reports">Reports</a>
+    <a href="#/tips" data-route="tips">Saving Tips</a>
+  </nav>
+  <div class="household">The Alvarez Family · 4 people · <span id="header-month"></span></div>
+</header>
+<main id="view" aria-live="polite"></main>
+<footer class="pagefoot">
+  <p>NestEgg keeps your budget on your own device — no account, no cloud, no ads. Data is stored in this browser only.</p>
+  <p>Demo household: the Alvarez family. All figures are the family's own sample budget.</p>
+</footer>
+<script type="module" src="main.js"></script>
+</body>
+</html>
