@@ -89,8 +89,7 @@ export function bind(el, ctx) {
       const raw = (input.value || "").trim();
       const v = Math.round(parseFloat(raw) * 100);
       if (raw === "" || !Number.isFinite(v) || v < 0) {
-        budgetMsg = `“${raw || "blank"}” is not a valid limit for ${input.dataset.budget} — please enter a number of dollars, e.g. 620.50.`;
-        el.querySelector("#budget-msg").textContent = budgetMsg;
+        el.querySelector("#budget-msg").textContent = `“${raw || "blank"}” is not a valid limit for ${input.dataset.budget} — please enter a number of dollars, e.g. 620.50.`;
         input.value = ((state.budgets[input.dataset.budget] || 0) / 100).toFixed(2);
         return;
       }

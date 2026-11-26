@@ -15,6 +15,9 @@ export function render(ctx) {
     const funded = g.saved >= g.target;
     const ratio = Math.min(1, g.saved / g.target);
     const toGo = Math.max(0, g.target - g.saved);
+    // A contribution note is shown exactly once: this render consumes it.
+    const notice = contribNotices[g.id] || "";
+    delete contribNotices[g.id];
     const form = funded
       ? `<p><span class="badge">Fully funded</span> <span class="hint">This goal is complete — the money is set aside.</span></p>`
       : `<form class="contribute-form" data-goal="${esc(g.id)}">
@@ -22,7 +25,7 @@ export function render(ctx) {
           <div class="field"><label for="c-${esc(g.id)}">Add money ($)</label><input id="c-${esc(g.id)}" type="number" min="1" step="1" placeholder="50" required></div>
           <div class="field"><label>&nbsp;</label><button class="btn" type="submit">Contribute</button></div>
         </div>
-        <p class="form-msg" role="alert">${esc(contribNotices[g.id] || "")}</p>
+        <p class="form-msg" role="alert">${esc(notice)}</p>
         <p class="hint">Contributing records a real Savings transfer this month. It moves money to this goal — it is not counted as spending, so the Dashboard stays honest.</p>
       </form>`;
     return `<div class="card">
@@ -61,8 +64,10 @@ export function bind(el, ctx) {
     e.preventDefault();
     const target = Math.round(parseFloat(el.querySelector("#g-target").value) * 100);
     const name = el.querySelector("#g-name").value.trim();
-    if (!name) { goalFormMsg = "Please give the goal a name."; el.querySelector("#goal-msg").textContent = goalFormMsg; return; }
-    if (!Number.isFinite(target) || target <= 0) { goalFormMsg = "Please enter a target above $0 — numbers only, e.g. 800."; el.querySelector("#goal-msg").textContent = goalFormMsg; return; }
+    // Errors go straight to the DOM (no rerender on this path) so a stale
+    // message can never resurface on a later render.
+    if (!name) { el.querySelector("#goal-msg").textContent = "Please give the goal a name."; return; }
+    if (!Number.isFinite(target) || target <= 0) { el.querySelector("#goal-msg").textContent = "Please enter a target above $0 — numbers only, e.g. 800."; return; }
     goalFormMsg = "";
     addGoal(state, { name, target });
     rerender();
@@ -82,14 +87,12 @@ export function bind(el, ctx) {
       if (!goal) return;
       const remaining = goal.target - goal.saved;
       if (!Number.isFinite(cents) || cents <= 0) {
-        contribNotices[goal.id] = "Please enter an amount above $0 — numbers only, e.g. 50.";
-        f.querySelector(".form-msg").textContent = contribNotices[goal.id];
+        f.querySelector(".form-msg").textContent = "Please enter an amount above $0 — numbers only, e.g. 50.";
         return;
       }
       // F-08: never contribute past the target — say the maximum out loud.
       if (cents > remaining) {
-        contribNotices[goal.id] = `Only ${money(remaining)} to go on this goal — please enter ${money(remaining)} or less.`;
-        f.querySelector(".form-msg").textContent = contribNotices[goal.id];
+        f.querySelector(".form-msg").textContent = `Only ${money(remaining)} to go on this goal — please enter ${money(remaining)} or less.`;
         return;
       }
       // F-09: the transfer is dated inside the month being viewed.

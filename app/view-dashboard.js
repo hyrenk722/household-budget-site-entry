@@ -46,7 +46,7 @@ export function render(ctx) {
   <div class="grid grid-4 mt">
     <div class="card stat"><div class="label">Income</div><div class="value good">${money(t.income)}</div><div class="note">Salary + freelance</div></div>
     <div class="card stat"><div class="label">Spent</div><div class="value">${money(t.spent)}</div><div class="note">${pct(t.spent, t.income)} of income</div></div>
-    <div class="card stat"><div class="label">Left over</div><div class="value ${t.remaining < 0 ? "warn" : "good"}">${money(t.remaining)}</div><div class="note">Before planned saving</div></div>
+    <div class="card stat"><div class="label">Left over</div><div class="value ${t.remaining < 0 ? "warn" : "good"}">${money(t.remaining)}</div><div class="note">Before planned saving · ${money(savingsMoved(state, month))} moved to savings</div></div>
     <div class="card stat"><div class="label">Savings rate</div><div class="value good">${saveRate}%</div><div class="note">Goal: 15% of income</div></div>
   </div>
   <div class="grid grid-2-1 mt">

@@ -9,12 +9,19 @@ let addMsg = "";
 let editMsg = "";
 let addNotice = "";
 
+// Called when the demo data is reset, so a search typed earlier does not
+// keep filtering the fresh sample (module state otherwise outlives the data).
+export function resetFilters() {
+  filterCat = "All";
+  searchText = "";
+}
+
 function filteredTx(state, month) {
   let txs = transactionsForMonth(state, month);
   if (filterCat !== "All") txs = txs.filter((t) => t.cat === filterCat);
   if (searchText) {
     const q = searchText.toLowerCase();
-    txs = txs.filter((t) => t.desc.toLowerCase().includes(q));
+    txs = txs.filter((t) => t.desc.toLowerCase().includes(q) || t.cat.toLowerCase().includes(q));
   }
   return txs;
 }
@@ -45,6 +52,10 @@ function countText(count) {
 export function render(ctx) {
   const { state, month } = ctx;
   const { rows, count } = tableBody(state, month);
+  // A notice is shown exactly once: the render after the add consumes it,
+  // so it never goes stale on a later month switch or route change.
+  const notice = addNotice;
+  addNotice = "";
   const catOptions = ["All", "Income", ...CATEGORIES.map((c) => c.name)]
     .map((c) => `<option ${c === filterCat ? "selected" : ""}>${esc(c)}</option>`).join("");
 
@@ -54,7 +65,7 @@ export function render(ctx) {
   <div class="card mt">
     <div class="toolbar">
       <div class="field"><label for="f-cat">Category</label><select id="f-cat">${catOptions}</select></div>
-      <div class="field"><label for="f-search">Search</label><input id="f-search" type="search" placeholder="e.g. Costco" value="${esc(searchText)}"></div>
+      <div class="field"><label for="f-search">Search</label><input id="f-search" type="search" placeholder="e.g. Costco or Groceries" value="${esc(searchText)}"></div>
       <button class="btn" id="show-add">+ Add transaction</button>
     </div>
     <form id="add-form" class="inline-form" aria-label="Add transaction">
@@ -65,7 +76,7 @@ export function render(ctx) {
       </div>
       <div class="field"><label for="a-desc">Description</label><input id="a-desc" type="text" placeholder="What was it for?" required></div>
       <p class="form-msg" id="add-msg" role="alert">${esc(addMsg)}</p>
-      <p class="hint" id="add-notice" role="status">${esc(addNotice)}</p>
+      <p class="hint" id="add-notice" role="status">${esc(notice)}</p>
       <div class="form-actions"><button class="btn" type="submit">Save transaction</button><button class="btn ghost" type="button" id="cancel-add">Cancel</button></div>
     </form>
     <form id="edit-form" class="inline-form" aria-label="Edit transaction">
@@ -104,6 +115,8 @@ export function bind(el, ctx) {
   el.querySelector("#f-search").addEventListener("input", (e) => { searchText = e.target.value; refreshTable(); });
   el.querySelector("#show-add").addEventListener("click", () => {
     addMsg = ""; addNotice = "";
+    el.querySelector("#add-msg").textContent = "";
+    el.querySelector("#add-notice").textContent = "";
     el.querySelector("#add-form").classList.add("open");
     el.querySelector("#edit-form").classList.remove("open");
   });
@@ -121,20 +134,22 @@ export function bind(el, ctx) {
   const showFormError = (id, msg) => { el.querySelector(id).textContent = msg; };
   el.querySelector("#add-form").addEventListener("submit", (e) => {
     e.preventDefault();
-    // F-14: invalid input is reported, not swallowed silently.
+    // F-14: invalid input is reported in place, not swallowed silently.
+    // The message is written straight to the DOM (no rerender happens on
+    // this path), so it can never resurface stale on a later render.
     const amt = Math.round(parseFloat(el.querySelector("#a-amt").value) * 100);
     const date = el.querySelector("#a-date").value;
     const desc = el.querySelector("#a-desc").value.trim();
-    if (!desc) { addMsg = "Please add a short description."; showFormError("#add-msg", addMsg); return; }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { addMsg = "Please pick a valid date."; showFormError("#add-msg", addMsg); return; }
-    if (!Number.isFinite(amt) || amt === 0) { addMsg = "Please enter an amount that is not zero — numbers only, e.g. -45.20 for spending."; showFormError("#add-msg", addMsg); return; }
+    if (!desc) { showFormError("#add-msg", "Please add a short description."); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { showFormError("#add-msg", "Please pick a valid date."); return; }
+    if (!Number.isFinite(amt) || amt === 0) { showFormError("#add-msg", "Please enter an amount that is not zero — numbers only, e.g. -45.20 for spending."); return; }
     const tx = addTransaction(state, {
       date,
       desc,
       cat: el.querySelector("#a-cat").value,
       amt,
     });
-    if (!tx) { addMsg = "That transaction could not be saved — please check the amount and try again."; showFormError("#add-msg", addMsg); return; }
+    if (!tx) { showFormError("#add-msg", "That transaction could not be saved — please check the amount and try again."); return; }
     addMsg = "";
     // F-09 (same family): a date in another month is saved there, not here.
     addNotice = monthOf(date) !== month
@@ -147,16 +162,16 @@ export function bind(el, ctx) {
     const amt = Math.round(parseFloat(el.querySelector("#e-amt").value) * 100);
     const date = el.querySelector("#e-date").value;
     const desc = el.querySelector("#e-desc").value.trim();
-    if (!desc) { editMsg = "Please add a short description."; showFormError("#edit-msg", editMsg); return; }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { editMsg = "Please pick a valid date."; showFormError("#edit-msg", editMsg); return; }
-    if (!Number.isFinite(amt) || amt === 0) { editMsg = "Please enter an amount that is not zero — numbers only."; showFormError("#edit-msg", editMsg); return; }
+    if (!desc) { showFormError("#edit-msg", "Please add a short description."); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { showFormError("#edit-msg", "Please pick a valid date."); return; }
+    if (!Number.isFinite(amt) || amt === 0) { showFormError("#edit-msg", "Please enter an amount that is not zero — numbers only."); return; }
     const saved = updateTransaction(state, el.querySelector("#e-id").value, {
       date,
       desc,
       cat: el.querySelector("#e-cat").value,
       amt,
     });
-    if (!saved) { editMsg = "That transaction could not be found — please reload the page and try again."; showFormError("#edit-msg", editMsg); return; }
+    if (!saved) { showFormError("#edit-msg", "That transaction could not be found — please reload the page and try again."); return; }
     editMsg = "";
     rerender();
   });

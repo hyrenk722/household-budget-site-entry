@@ -60,6 +60,7 @@ document.addEventListener("click", (e) => {
 document.getElementById("reset-demo").addEventListener("click", () => {
   if (window.confirm("Reset the demo data back to the Alvarez family's original sample? Your changes will be lost.")) {
     state = resetState();
+    Transactions.resetFilters();
     month = "2026-11";
     render();
   }
