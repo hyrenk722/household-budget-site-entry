@@ -1,7 +1,7 @@
 // view-dashboard.js — monthly overview: totals, donut, budget bars, recent, bills.
 
-import { money, pct, monthLabel } from "./format.js";
-import { monthTotals, categorySpend, transactionsForMonth, BILLS, CATEGORIES, CATEGORY_COLORS } from "./data.js";
+import { money, pct, monthLabel, monthShort, shiftMonth, esc } from "./format.js";
+import { monthTotals, categorySpend, savingsMoved, transactionsForMonth, BILLS, CATEGORIES, CATEGORY_COLORS } from "./data.js";
 import { donutChart } from "./charts.js";
 
 export function render(ctx) {
@@ -15,17 +15,24 @@ export function render(ctx) {
     .sort((a, b) => b.value - a.value);
   const recent = transactionsForMonth(state, month).slice(0, 5);
   const budgetRows = CATEGORIES.filter((c) => state.budgets[c.name]).map((c) => {
-    const used = spend[c.name] || 0;
+    // N1: the Savings row shows money actually moved to savings, not spending.
+    const used = c.name === "Savings" ? savingsMoved(state, month) : (spend[c.name] || 0);
     const limit = state.budgets[c.name];
     const ratio = used / limit;
     const cls = ratio > 1 ? "over" : ratio >= 0.85 ? "near" : "";
-    const badge = ratio > 1 ? '<span class="badge over">Over</span>' : ratio >= 0.85 ? '<span class="badge near">Almost there</span>' : "";
+    // N2: exactly at the limit is "At limit", not "Almost there".
+    const badge = ratio > 1 ? '<span class="badge over">Over</span>'
+      : Math.abs(ratio - 1) < 1e-9 ? '<span class="badge limit">At limit</span>'
+      : ratio >= 0.85 ? '<span class="badge near">Almost there</span>' : "";
     return `<div class="budget-row">
       <span class="cat"><span class="cat-dot" style="background:${c.color}"></span>${c.name} ${badge}</span>
       <span class="nums">${money(used)} of ${money(limit)}</span>
       <span class="bar"><span class="${cls}" style="width:${Math.min(100, ratio * 100).toFixed(0)}%"></span></span>
     </div>`;
   }).join("");
+  // F-10: bills fall due in the month after the month being viewed.
+  const nextMonth = shiftMonth(month, 1);
+  const billRows = BILLS.map((b) => `<div class="bill-row"><div>${b.name}<small>${b.note} · due ${monthShort(nextMonth)} ${b.dueDay}</small></div><span class="amt">${money(b.amount)}</span></div>`).join("");
 
   return `
   <div class="monthbar">
@@ -52,8 +59,8 @@ export function render(ctx) {
     </div>
     <div class="card">
       <h2>Bills coming up</h2>
-      ${BILLS.map((b) => `<div class="bill-row"><div>${b.name}<small>${b.note} · due ${b.due}</small></div><span class="amt">${money(b.amount)}</span></div>`).join("")}
-      <p class="hint" style="margin-top:.7rem">Total due in December: <strong>${money(BILLS.reduce((a, b) => a + b.amount, 0))}</strong></p>
+      ${billRows}
+      <p class="hint" style="margin-top:.7rem">Total due in ${monthLabel(nextMonth)}: <strong>${money(BILLS.reduce((a, b) => a + b.amount, 0))}</strong></p>
     </div>
   </div>
   <div class="grid grid-2 mt">
@@ -65,7 +72,7 @@ export function render(ctx) {
     <div class="card">
       <h2>Recent transactions</h2>
       <ul class="tx-list">
-        ${recent.map((tx) => `<li><span class="cat-dot" style="background:${CATEGORY_COLORS[tx.cat] || "#999"}"></span><span class="desc">${tx.desc}<small>${tx.date} · ${tx.cat}</small></span><span class="amt ${tx.amt < 0 ? "negative" : "positive"}">${tx.amt < 0 ? "−" : "+"}${money(Math.abs(tx.amt))}</span></li>`).join("")}
+        ${recent.map((tx) => `<li><span class="cat-dot" style="background:${CATEGORY_COLORS[tx.cat] || "#999"}"></span><span class="desc">${esc(tx.desc)}<small>${tx.date} · ${esc(tx.cat)}</small></span><span class="amt ${tx.amt < 0 ? "negative" : "positive"}">${tx.amt < 0 ? "−" : "+"}${money(Math.abs(tx.amt))}</span></li>`).join("")}
       </ul>
       <p class="hint" style="margin-top:.7rem"><a href="#/transactions">See all transactions →</a></p>
     </div>

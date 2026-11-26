@@ -3,8 +3,8 @@
 const TIPS = [
   {
     title: "Pay yourself first — on payday, not at month's end",
-    body: "Set an automatic transfer of $200 to savings for the morning your salary lands. The Alvarez family saves $800 a month this way; when saving waits until the end of the month, it never happens.",
-    save: "Saves about $200 a month, automatically",
+    body: "Set an automatic transfer of $800 to savings for the morning your salary lands. The Alvarez family saves $800 a month this way; when saving waits until the end of the month, it never happens.",
+    save: "Saves about $800 a month, automatically",
   },
   {
     title: "One grocery list, one trip a week",
@@ -38,7 +38,7 @@ const TIPS = [
   },
   {
     title: "Keep the car cheap: tire pressure and gentle starts",
-    body: "Tires 5 PSI low burn about 2% more gas, and hard acceleration burns more still. Check pressure monthly and the family's $130-a-month gas bill drops by $10–$15.",
+    body: "Tires 5 PSI low burn about 2% more gas, and hard acceleration burns more still. Check pressure monthly and the family's $90-a-month gas bill drops by $10–$15.",
     save: "Saves $10–$15 a month",
   },
   {

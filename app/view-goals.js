@@ -1,26 +1,36 @@
 // view-goals.js — savings goals: progress bars, add a goal, contribute real money.
 
-import { money, pct, todayIso } from "./format.js";
+import { money, pct, monthLabel, dateInMonth, esc } from "./format.js";
 import { addGoal, contributeToGoal } from "./data.js";
+
+let goalFormMsg = "";
+const contribNotices = {};
 
 export function render(ctx) {
   const { state } = ctx;
   const totalSaved = state.goals.reduce((a, g) => a + g.saved, 0);
   const totalTarget = state.goals.reduce((a, g) => a + g.target, 0);
   const cards = state.goals.map((g) => {
-    const ratio = g.saved / g.target;
-    return `<div class="card">
-      <div class="goal-head"><h2>${g.name}</h2><span class="target">${money(g.saved)} <span class="hint">of ${money(g.target)}</span></span></div>
-      <p class="lede">${g.note || ""}</p>
-      <span class="bar"><span style="width:${Math.min(100, ratio * 100).toFixed(0)}%"></span></span>
-      <p style="margin-top:.5rem"><strong>${pct(g.saved, g.target)}</strong> funded · <span class="hint">${money(g.target - g.saved)} to go</span></p>
-      <form class="contribute-form" data-goal="${g.id}">
+    // F-08: a goal never shows more than 100% funded or a negative "to go".
+    const funded = g.saved >= g.target;
+    const ratio = Math.min(1, g.saved / g.target);
+    const toGo = Math.max(0, g.target - g.saved);
+    const form = funded
+      ? `<p><span class="badge">Fully funded</span> <span class="hint">This goal is complete — the money is set aside.</span></p>`
+      : `<form class="contribute-form" data-goal="${esc(g.id)}">
         <div class="form-row" style="grid-template-columns:1fr auto">
-          <div class="field"><label for="c-${g.id}">Add money ($)</label><input id="c-${g.id}" type="number" min="1" step="1" placeholder="50" required></div>
+          <div class="field"><label for="c-${esc(g.id)}">Add money ($)</label><input id="c-${esc(g.id)}" type="number" min="1" step="1" placeholder="50" required></div>
           <div class="field"><label>&nbsp;</label><button class="btn" type="submit">Contribute</button></div>
         </div>
-        <p class="hint">Contributing records a real Savings transaction this month, so the Dashboard and Budget move too.</p>
-      </form>
+        <p class="form-msg" role="alert">${esc(contribNotices[g.id] || "")}</p>
+        <p class="hint">Contributing records a real Savings transfer this month. It moves money to this goal — it is not counted as spending, so the Dashboard stays honest.</p>
+      </form>`;
+    return `<div class="card">
+      <div class="goal-head"><h2>${esc(g.name)}</h2><span class="target">${money(g.saved)} <span class="hint">of ${money(g.target)}</span></span></div>
+      <p class="lede">${esc(g.note || "")}</p>
+      <span class="bar"><span style="width:${(ratio * 100).toFixed(0)}%"></span></span>
+      <p style="margin-top:.5rem"><strong>${pct(Math.min(g.saved, g.target), g.target)}</strong> funded · <span class="hint">${funded ? "Fully funded" : money(toGo) + " to go"}</span></p>
+      ${form}
     </div>`;
   }).join("");
 
@@ -28,8 +38,8 @@ export function render(ctx) {
   <h1>Savings goals</h1>
   <p class="lede">Three things the Alvarez family is saving for — every contribution is real money, taken out of this month's spending.</p>
   <div class="grid grid-2 mt">
-    <div class="card stat"><div class="label">Saved across all goals</div><div class="value good">${money(totalSaved)}</div><div class="note">${pct(totalSaved, totalTarget)} of all targets combined</div></div>
-    <div class="card stat"><div class="label">Still to save</div><div class="value">${money(totalTarget - totalSaved)}</div><div class="note">Across ${state.goals.length} goals</div></div>
+    <div class="card stat"><div class="label">Saved across all goals</div><div class="value good">${money(totalSaved)}</div><div class="note">${pct(Math.min(totalSaved, totalTarget), totalTarget)} of all targets combined</div></div>
+    <div class="card stat"><div class="label">Still to save</div><div class="value">${money(Math.max(0, totalTarget - totalSaved))}</div><div class="note">Across ${state.goals.length} goals</div></div>
   </div>
   <div class="grid grid-2 mt">${cards}</div>
   <div class="card mt">
@@ -39,6 +49,7 @@ export function render(ctx) {
         <div class="field"><label for="g-name">Goal name</label><input id="g-name" type="text" placeholder="e.g. New bikes for the kids" required></div>
         <div class="field"><label for="g-target">Target amount ($)</label><input id="g-target" type="number" min="1" step="1" placeholder="800" required></div>
       </div>
+      <p class="form-msg" id="goal-msg" role="alert">${esc(goalFormMsg)}</p>
       <div class="form-actions"><button class="btn" type="submit">Add goal</button></div>
     </form>
   </div>`;
@@ -50,17 +61,40 @@ export function bind(el, ctx) {
     e.preventDefault();
     const target = Math.round(parseFloat(el.querySelector("#g-target").value) * 100);
     const name = el.querySelector("#g-name").value.trim();
-    if (!name || !Number.isFinite(target) || target <= 0) return;
+    if (!name) { goalFormMsg = "Please give the goal a name."; el.querySelector("#goal-msg").textContent = goalFormMsg; return; }
+    if (!Number.isFinite(target) || target <= 0) { goalFormMsg = "Please enter a target above $0 — numbers only, e.g. 800."; el.querySelector("#goal-msg").textContent = goalFormMsg; return; }
+    goalFormMsg = "";
     addGoal(state, { name, target });
     rerender();
   });
   el.querySelectorAll(".contribute-form").forEach((f) => {
+    const input = f.querySelector("input[type=number]");
+    // A fresh keystroke clears the old note for this goal.
+    input.addEventListener("input", () => {
+      delete contribNotices[f.dataset.goal];
+      const msg = f.querySelector(".form-msg");
+      if (msg) msg.textContent = "";
+    });
     f.addEventListener("submit", (e) => {
       e.preventDefault();
-      const input = f.querySelector("input[type=number]");
       const cents = Math.round(parseFloat(input.value) * 100);
-      if (!Number.isFinite(cents) || cents <= 0) return;
-      contributeToGoal(state, f.dataset.goal, cents, todayIso());
+      const goal = state.goals.find((g) => g.id === f.dataset.goal);
+      if (!goal) return;
+      const remaining = goal.target - goal.saved;
+      if (!Number.isFinite(cents) || cents <= 0) {
+        contribNotices[goal.id] = "Please enter an amount above $0 — numbers only, e.g. 50.";
+        f.querySelector(".form-msg").textContent = contribNotices[goal.id];
+        return;
+      }
+      // F-08: never contribute past the target — say the maximum out loud.
+      if (cents > remaining) {
+        contribNotices[goal.id] = `Only ${money(remaining)} to go on this goal — please enter ${money(remaining)} or less.`;
+        f.querySelector(".form-msg").textContent = contribNotices[goal.id];
+        return;
+      }
+      // F-09: the transfer is dated inside the month being viewed.
+      contributeToGoal(state, goal.id, cents, dateInMonth(month));
+      contribNotices[goal.id] = `Contributed ${money(cents)} — recorded in ${monthLabel(month)}.`;
       rerender();
     });
   });

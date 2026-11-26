@@ -1,15 +1,21 @@
 // charts.js — hand-drawn SVG charts (donut + grouped bars). No libraries.
 
-import { money, moneyShort } from "./format.js";
-
-function esc(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+import { money, moneyShort, esc } from "./format.js";
 
 export function donutChart(slices, size = 240) {
+  // Ignore empty/negative slices (F-17); a lone slice draws a full ring (F-15).
+  slices = slices.filter((s) => Number.isFinite(s.value) && s.value > 0);
   const total = slices.reduce((a, s) => a + s.value, 0);
   if (!total) return '<p class="empty">No spending in this month yet.</p>';
   const cx = size / 2, cy = size / 2, r = size / 2 - 14, inner = r * 0.62;
+  if (slices.length === 1) {
+    const s = slices[0];
+    return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="Spending by category donut chart">
+    <path d="M ${cx - r} ${cy} A ${r} ${r} 0 1 1 ${cx + r} ${cy} A ${r} ${r} 0 1 1 ${cx - r} ${cy} Z M ${cx - inner} ${cy} A ${inner} ${inner} 0 1 0 ${cx + inner} ${cy} A ${inner} ${inner} 0 1 0 ${cx - inner} ${cy} Z" fill="${s.color}" fill-rule="evenodd"><title>${esc(s.label)} — ${money(s.value)}</title></path>
+    <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="15" fill="#6b7568">Spent</text>
+    <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-size="19" font-weight="800" fill="#143d27">${moneyShort(total)}</text>
+  </svg>`;
+  }
   let a0 = -Math.PI / 2;
   const paths = [];
   for (const s of slices) {
@@ -33,7 +39,12 @@ export function donutChart(slices, size = 240) {
 }
 
 export function barChart(months, width = 640, height = 260) {
-  // months: [{label, income, spent}] in cents
+  // months: [{label, income, spent}] in cents; clamp bad values (F-17).
+  months = months.map((m) => ({
+    label: m.label,
+    income: Number.isFinite(m.income) ? Math.max(0, m.income) : 0,
+    spent: Number.isFinite(m.spent) ? Math.max(0, m.spent) : 0,
+  }));
   const max = Math.max(...months.map((m) => Math.max(m.income, m.spent)), 1);
   const padL = 52, padB = 28, padT = 14;
   const plotW = width - padL - 12, plotH = height - padT - padB;

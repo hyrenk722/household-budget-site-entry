@@ -45,7 +45,7 @@ p { margin: 0 0 .7rem; }
   font-size: .95rem; font-weight: 600;
 }
 .mainnav a:hover { background: rgba(255,255,255,.14); }
-.mainnav a.active { background: var(--orange); color: #fff; }
+.mainnav a.active { background: #a34a10; color: #fff; font-weight: 800; }
 .household { margin-left: auto; font-size: .85rem; opacity: .9; }
 
 #view { max-width: 1080px; margin: 0 auto; padding: 1.4rem 1.2rem 2.5rem; }
@@ -131,6 +131,7 @@ tr.over td { background: var(--red-soft); }
 }
 .badge.over { background: var(--red-soft); color: var(--red); }
 .badge.near { background: var(--orange-soft); color: var(--amber); }
+.badge.limit { background: var(--orange-soft); color: #a34a10; }
 
 /* lists */
 .tx-list { list-style: none; margin: 0; padding: 0; }
@@ -159,6 +160,13 @@ tr.over td { background: var(--red-soft); }
 .callout { background: var(--green-soft); border-radius: var(--radius); padding: 1rem 1.2rem; }
 .callout strong { color: var(--green-deep); }
 .empty { color: var(--muted); font-style: italic; }
+/* Banner for load/save problems (F-02/F-03/F-06) + inline form errors (F-14). */
+.notice {
+  background: #fdf3e0; border: 1px solid #e8c87a; border-left: 5px solid var(--amber);
+  border-radius: var(--radius); padding: .8rem 1rem; margin-bottom: 1rem; color: #5c3d00;
+}
+.form-msg { color: var(--red); font-weight: 700; font-size: .9rem; margin: .2rem 0 .5rem; min-height: 1.2em; }
+.form-msg:empty { display: none; }
 .toolbar { display: flex; gap: .7rem; flex-wrap: wrap; align-items: end; margin-bottom: 1rem; }
 .toolbar .field { flex: 1; min-width: 160px; margin-bottom: 0; }
 .inline-form { display: none; }

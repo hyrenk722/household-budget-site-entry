@@ -1,19 +1,31 @@
 // format.js — money, date and percent formatting for NestEgg.
 
+// Escape user-supplied text before it is inserted into innerHTML (F-07).
+export function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function money(cents) {
+  if (!Number.isFinite(cents)) return "$0.00"; // F-17: never "$NaN"
   const sign = cents < 0 ? "-" : "";
   const abs = Math.abs(cents) / 100;
   return sign + "$" + abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export function moneyShort(cents) {
+  if (!Number.isFinite(cents)) return "$0.00"; // F-17
   const abs = Math.abs(cents) / 100;
   if (abs >= 1000) return (cents < 0 ? "-" : "") + "$" + (abs / 1000).toFixed(1) + "k";
   return money(cents);
 }
 
 export function pct(numerator, denominator) {
-  if (!denominator) return "0%";
+  if (!denominator || !Number.isFinite(numerator) || !Number.isFinite(denominator)) return "0%";
   return Math.round((numerator / denominator) * 100) + "%";
 }
 
@@ -41,4 +53,11 @@ export function shiftMonth(ym, delta) {
 export function todayIso() {
   const d = new Date();
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+// F-09: a date inside the month being viewed — today if that month is the
+// current month, otherwise the 1st of the viewed month.
+export function dateInMonth(ym) {
+  const today = todayIso();
+  return today.slice(0, 7) === ym ? today : ym + "-01";
 }

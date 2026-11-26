@@ -1,7 +1,7 @@
 // main.js — hash router + app startup for NestEgg.
 
-import { loadState } from "./data.js";
-import { monthLabel, shiftMonth } from "./format.js";
+import { loadState, resetState, loadNotice, saveError } from "./data.js";
+import { monthLabel, shiftMonth, esc } from "./format.js";
 import * as Dashboard from "./view-dashboard.js";
 import * as Transactions from "./view-transactions.js";
 import * as Budget from "./view-budget.js";
@@ -18,7 +18,7 @@ const ROUTES = {
   tips: Tips,
 };
 
-const state = loadState();
+let state = loadState();
 let month = "2026-11";
 const viewEl = document.getElementById("view");
 const headerMonth = document.getElementById("header-month");
@@ -32,7 +32,15 @@ function render() {
   const route = currentRoute();
   const view = ROUTES[route];
   const ctx = { state, month, rerender: render };
-  viewEl.innerHTML = view.render(ctx);
+  // Load/save problems are shown, never swallowed: a repaired load or a
+  // failed save must be visible to the person using the app (F-02/F-03/F-06).
+  const notices = [];
+  if (loadNotice) notices.push(loadNotice);
+  if (saveError) notices.push(saveError);
+  const banner = notices.length
+    ? `<div class="notice" role="alert">${notices.map((n) => esc(n)).join("<br>")}</div>`
+    : "";
+  viewEl.innerHTML = banner + view.render(ctx);
   if (view.bind) view.bind(viewEl, ctx);
   headerMonth.textContent = monthLabel(month);
   document.querySelectorAll(".mainnav a").forEach((a) => {
@@ -46,6 +54,15 @@ document.addEventListener("click", (e) => {
   if (!btn) return;
   month = shiftMonth(month, Number(btn.dataset.monthShift));
   render();
+});
+
+// N6: the demo reset that resetState() was waiting for.
+document.getElementById("reset-demo").addEventListener("click", () => {
+  if (window.confirm("Reset the demo data back to the Alvarez family's original sample? Your changes will be lost.")) {
+    state = resetState();
+    month = "2026-11";
+    render();
+  }
 });
 
 window.addEventListener("hashchange", render);
