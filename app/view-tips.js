@@ -3,8 +3,11 @@
 const TIPS = [
   {
     title: "Pay yourself first — on payday, not at month's end",
-    body: "Set an automatic transfer of $800 to savings for the morning your salary lands. The Alvarez family saves $800 a month this way; when saving waits until the end of the month, it never happens.",
-    save: "Saves about $800 a month, automatically",
+    // F-22 (rev2): the old wording claimed the family already "saves $800 a
+    // month this way" — false against the data ($0 moved to savings, no
+    // Savings transactions). This is a target to aim for, not a fact.
+    body: "Set an automatic transfer of $800 to savings for the morning your salary lands. The Alvarez family aims to move $800 a month this way — their Savings budget is $800, and nothing has moved yet; when saving waits until the end of the month, it never happens.",
+    save: "Moves $800 a month to savings, automatically",
   },
   {
     title: "One grocery list, one trip a week",

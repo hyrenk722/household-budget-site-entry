@@ -17,7 +17,11 @@ export function render(ctx) {
   });
   const avgIncome = Math.round(series.reduce((a, m) => a + m.income, 0) / series.length);
   const avgSpent = Math.round(series.reduce((a, m) => a + m.spent, 0) / series.length);
-  const avgSaved = avgIncome - avgSpent;
+  // F-21 (rev2): income minus spending is money LEFT OVER, not money saved —
+  // nothing here was actually moved to savings (savingsMoved is $0 for every
+  // month in the data). Calling it "saved" put a false 17% savings rate on
+  // this page, contradicting the Dashboard's $0 moved.
+  const avgLeftOver = avgIncome - avgSpent;
   const best = series.reduce((a, m) => (m.income - m.spent > a.income - a.spent ? m : a), series[0]);
   // F-18: say out loud which months are stored summaries, not live totals.
   const summaryLabels = series.filter((m) => m.fromSummary).map((m) => m.label);
@@ -29,7 +33,11 @@ export function render(ctx) {
   const prevMonth = shiftMonth(month, -1);
   const thisSpend = categorySpend(state, month);
   const lastSpend = categorySpend(state, prevMonth);
-  const compareRows = CATEGORIES.filter((c) => thisSpend[c.name] || lastSpend[c.name]).map((c) => {
+  // F-20 (rev2): months with only a stored summary (Jun–Aug 2026) have no
+  // transactions, so the per-category comparison used to render 0 rows while
+  // the chart above still showed numbers. Show the totals from the summary
+  // and say out loud that there is no per-category breakdown.
+  let compareRows = CATEGORIES.filter((c) => thisSpend[c.name] || lastSpend[c.name]).map((c) => {
     const cur = thisSpend[c.name] || 0;
     const prev = lastSpend[c.name] || 0;
     const delta = cur - prev;
@@ -39,6 +47,21 @@ export function render(ctx) {
       <td class="num">${money(prev)}</td><td class="num">${money(cur)}</td>
       <td class="num ${cls}">${arrow} ${money(Math.abs(delta))}</td></tr>`;
   }).join("");
+  if (!compareRows) {
+    const spentFor = (ym) => {
+      const s = MONTH_SUMMARIES.find((x) => x.ym === ym);
+      return s ? s.spent : monthTotals(state, ym).spent;
+    };
+    const curTotal = spentFor(month);
+    const prevTotal = spentFor(prevMonth);
+    const delta = curTotal - prevTotal;
+    const arrow = delta > 0 ? "▲" : delta < 0 ? "▼" : "—";
+    const cls = delta > 0 ? "negative" : delta < 0 ? "positive" : "";
+    compareRows = `<tr><td>Total spending</td>
+      <td class="num">${money(prevTotal)}</td><td class="num">${money(curTotal)}</td>
+      <td class="num ${cls}">${arrow} ${money(Math.abs(delta))}</td></tr>
+    <tr><td colspan="4" class="hint">No transaction-level data for these months — only monthly totals were kept, so there is no per-category breakdown. See the chart above for the totals.</td></tr>`;
+  }
 
   const tips = [];
   const dining = (thisSpend["Dining Out"] || 0) + (lastSpend["Dining Out"] || 0);
@@ -47,8 +70,8 @@ export function render(ctx) {
   if (groceries > 55000) tips.push(`Groceries ran ${money(groceries)} in ${monthLabel(month)}. A weekly meal plan and one bulk Costco run a month — instead of three small trips — cuts impulse buys.`);
   const entertainment = thisSpend.Entertainment || 0;
   if (entertainment > 5000) tips.push(`Entertainment was ${money(entertainment)} in ${monthLabel(month)}. The library lends movies and board games free, and the kids love the park just as much.`);
-  tips.push(`Average saving over six months is ${money(avgSaved)} a month (${pct(avgSaved, avgIncome)} of income). Moving that amount to savings on payday, automatically, locks the habit in.`);
-  if (best) tips.push(`${best.label} was the best month — ${money(best.income - best.spent)} saved. Whatever the family did then is worth repeating.`);
+  tips.push(`Average left over over six months is ${money(avgLeftOver)} a month (${pct(avgLeftOver, avgIncome)} of income). Moving that amount to savings on payday, automatically, locks the habit in.`);
+  if (best) tips.push(`${best.label} was the best month — ${money(best.income - best.spent)} left over. Whatever the family did then is worth repeating.`);
 
   return `
   <h1>Reports</h1>
@@ -56,7 +79,7 @@ export function render(ctx) {
   <div class="grid grid-3 mt">
     <div class="card stat"><div class="label">Average income / mo</div><div class="value">${money(avgIncome)}</div><div class="note">Last 6 months</div></div>
     <div class="card stat"><div class="label">Average spending / mo</div><div class="value">${money(avgSpent)}</div><div class="note">Last 6 months</div></div>
-    <div class="card stat"><div class="label">Average saved / mo</div><div class="value good">${money(avgSaved)}</div><div class="note">${pct(avgSaved, avgIncome)} savings rate</div></div>
+    <div class="card stat"><div class="label">Average left over / mo</div><div class="value ${avgLeftOver >= 0 ? "good" : "warn"}">${money(avgLeftOver)}</div><div class="note">${pct(avgLeftOver, avgIncome)} left over, before planned saving</div></div>
   </div>
   <div class="card mt">
     <h2>Income vs spending — last 6 months</h2>

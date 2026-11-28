@@ -55,6 +55,13 @@ export function todayIso() {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 
+// F-09/F-10 (rev2): the month being viewed starts at the real current
+// month, never a hard-coded seed month — on 01/12 the app used to open
+// still showing November 2026.
+export function currentMonth() {
+  return todayIso().slice(0, 7);
+}
+
 // F-09: a date inside the month being viewed — today if that month is the
 // current month, otherwise the 1st of the viewed month.
 export function dateInMonth(ym) {

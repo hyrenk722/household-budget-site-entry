@@ -40,6 +40,7 @@ export function render(ctx) {
   return `
   <h1>Savings goals</h1>
   <p class="lede">Three things the Alvarez family is saving for — every contribution is real money, taken out of this month's spending.</p>
+  <p class="hint">These balances were built up before the transaction history on this site begins, so no Savings transfer for them appears in Transactions — only new contributions below create Savings transactions.</p>
   <div class="grid grid-2 mt">
     <div class="card stat"><div class="label">Saved across all goals</div><div class="value good">${money(totalSaved)}</div><div class="note">${pct(Math.min(totalSaved, totalTarget), totalTarget)} of all targets combined</div></div>
     <div class="card stat"><div class="label">Still to save</div><div class="value">${money(Math.max(0, totalTarget - totalSaved))}</div><div class="note">Across ${state.goals.length} goals</div></div>

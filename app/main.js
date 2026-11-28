@@ -1,7 +1,7 @@
 // main.js — hash router + app startup for NestEgg.
 
 import { loadState, resetState, loadNotice, saveError } from "./data.js";
-import { monthLabel, shiftMonth, esc } from "./format.js";
+import { monthLabel, shiftMonth, currentMonth, esc } from "./format.js";
 import * as Dashboard from "./view-dashboard.js";
 import * as Transactions from "./view-transactions.js";
 import * as Budget from "./view-budget.js";
@@ -19,7 +19,7 @@ const ROUTES = {
 };
 
 let state = loadState();
-let month = "2026-11";
+let month = currentMonth();
 const viewEl = document.getElementById("view");
 const headerMonth = document.getElementById("header-month");
 
@@ -61,7 +61,7 @@ document.getElementById("reset-demo").addEventListener("click", () => {
   if (window.confirm("Reset the demo data back to the Alvarez family's original sample? Your changes will be lost.")) {
     state = resetState();
     Transactions.resetFilters();
-    month = "2026-11";
+    month = currentMonth();
     render();
   }
 });

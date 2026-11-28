@@ -8,7 +8,11 @@ export function render(ctx) {
   const { state, month } = ctx;
   const t = monthTotals(state, month);
   const spend = categorySpend(state, month);
-  const saveRate = t.income ? Math.round(((t.income - t.spent) / t.income) * 100) : 0;
+  // A-01 (rev2): the savings rate is money actually moved to savings, not
+  // leftover relabelled. (income-spent)/income read 31% while $0 had moved
+  // to savings — the cover screenshot contradicted itself.
+  const moved = savingsMoved(state, month);
+  const saveRate = t.income ? Math.round((moved / t.income) * 100) : 0;
   const slices = CATEGORIES
     .filter((c) => spend[c.name])
     .map((c) => ({ label: c.name, value: spend[c.name], color: c.color }))
@@ -46,8 +50,8 @@ export function render(ctx) {
   <div class="grid grid-4 mt">
     <div class="card stat"><div class="label">Income</div><div class="value good">${money(t.income)}</div><div class="note">Salary + freelance</div></div>
     <div class="card stat"><div class="label">Spent</div><div class="value">${money(t.spent)}</div><div class="note">${pct(t.spent, t.income)} of income</div></div>
-    <div class="card stat"><div class="label">Left over</div><div class="value ${t.remaining < 0 ? "warn" : "good"}">${money(t.remaining)}</div><div class="note">Before planned saving · ${money(savingsMoved(state, month))} moved to savings</div></div>
-    <div class="card stat"><div class="label">Savings rate</div><div class="value good">${saveRate}%</div><div class="note">Goal: 15% of income</div></div>
+    <div class="card stat"><div class="label">Left over</div><div class="value ${t.remaining < 0 ? "warn" : "good"}">${money(t.remaining)}</div><div class="note">Before planned saving · ${money(moved)} moved to savings</div></div>
+    <div class="card stat"><div class="label">Savings rate</div><div class="value ${saveRate >= 15 ? "good" : ""}">${saveRate}%</div><div class="note">Moved to savings · Goal: 15% of income</div></div>
   </div>
   <div class="grid grid-2-1 mt">
     <div class="card">

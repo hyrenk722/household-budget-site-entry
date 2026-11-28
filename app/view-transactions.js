@@ -68,11 +68,11 @@ export function render(ctx) {
       <div class="field"><label for="f-search">Search</label><input id="f-search" type="search" placeholder="e.g. Costco or Groceries" value="${esc(searchText)}"></div>
       <button class="btn" id="show-add">+ Add transaction</button>
     </div>
-    <form id="add-form" class="inline-form" aria-label="Add transaction">
+    <form id="add-form" class="inline-form${notice ? " open" : ""}" aria-label="Add transaction">
       <div class="form-row-3 form-row">
         <div class="field"><label for="a-date">Date</label><input id="a-date" type="date" value="${month}-15" required></div>
         <div class="field"><label for="a-cat">Category</label><select id="a-cat"><option>Income</option>${CATEGORIES.map((c) => `<option>${c.name}</option>`).join("")}</select></div>
-        <div class="field"><label for="a-amt">Amount ($) — minus for spending; the sign is fixed for you if you forget</label><input id="a-amt" type="number" step="0.01" placeholder="-45.20" required></div>
+        <div class="field"><label for="a-amt">Amount ($)</label><input id="a-amt" type="number" step="0.01" placeholder="-45.20" required><p class="hint">Minus for spending — the sign is fixed for you if you forget.</p></div>
       </div>
       <div class="field"><label for="a-desc">Description</label><input id="a-desc" type="text" placeholder="What was it for?" required></div>
       <p class="form-msg" id="add-msg" role="alert">${esc(addMsg)}</p>
@@ -173,13 +173,21 @@ export function bind(el, ctx) {
     });
     if (!saved) { showFormError("#edit-msg", "That transaction could not be found — please reload the page and try again."); return; }
     editMsg = "";
+    // F-24 (rev2): an edit that moves the row to another month says so out
+    // loud, like the add path (F-09) already does — otherwise the row just
+    // vanishes from this month with no word. addNotice is consumed by the
+    // render right after, which opens the add form so it is actually seen.
+    addNotice = monthOf(date) !== month
+      ? `Moved to ${monthLabel(monthOf(date))} — use the month arrows on the Dashboard to see it.`
+      : "";
     rerender();
   });
-  el.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => {
-    if (window.confirm("Delete this transaction?")) { deleteTransaction(state, b.dataset.del); rerender(); }
-  }));
-  el.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => {
-    const tx = state.transactions.find((t) => t.id === b.dataset.edit);
+  // F-19 (rev2): one delegated handler on tbody, not per-button listeners.
+  // refreshTable() replaces tbody.innerHTML on every keystroke/filter change,
+  // which used to orphan the listeners bound once in bind() — Edit/Delete
+  // silently died after any search or filter. Delegation survives the swap.
+  const openEdit = (id) => {
+    const tx = state.transactions.find((t) => t.id === id);
     if (!tx) return;
     const f = el.querySelector("#edit-form");
     f.querySelector("#e-id").value = tx.id;
@@ -201,5 +209,14 @@ export function bind(el, ctx) {
     f.classList.add("open");
     el.querySelector("#add-form").classList.remove("open");
     f.scrollIntoView({ block: "nearest" });
-  }));
+  };
+  el.querySelector("tbody").addEventListener("click", (e) => {
+    const delBtn = e.target.closest("[data-del]");
+    if (delBtn) {
+      if (window.confirm("Delete this transaction?")) { deleteTransaction(state, delBtn.dataset.del); rerender(); }
+      return;
+    }
+    const editBtn = e.target.closest("[data-edit]");
+    if (editBtn) openEdit(editBtn.dataset.edit);
+  });
 }
